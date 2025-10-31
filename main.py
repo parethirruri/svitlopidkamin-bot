@@ -89,7 +89,6 @@ async def start(update: Update, context):
         "📍 Підкамінь (Підкамінська ОТГ)\n"
         "🔌 ГПВ 1.2 | ГАВ 1 | СГАВ 1\n\n"
         "💡 Перевірити світло — `/svitlo`\n"
-        "🔔 Увімкнути сповіщення — `/setchat`"
     )
     await update.message.reply_text(text, parse_mode='Markdown')
 
