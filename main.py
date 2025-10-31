@@ -1,4 +1,4 @@
-# main.py — @svitlopidkamin_bot (v21.6 + Python 3.13)
+# main.py — @svitlopidkamin_bot (повністю готовий)
 import logging, re, pytz, requests
 from datetime import datetime, timedelta
 from bs4 import BeautifulSoup
@@ -6,10 +6,8 @@ from telegram import Update
 from telegram.ext import Application, CommandHandler, ContextTypes
 
 # ==================== НАЛАШТУВАННЯ ====================
-BOT_TOKEN = "8289591969:AAH0QDO7dJhq0lwfn9HcarxloO8_GY9RQcU"  # ← ТВІЙ ТОКЕН
+BOT_TOKEN = "8289591969:AAH0QDO7dJhq0lwfn9HcarxloO8_GY9RQcU"  # ТВІЙ ТОКЕН
 LOCATION = 'Підкамінь (Підкамінська ОТГ)'
-STREET = 'Молодіжна'
-HOUSE = '6'
 GPV_QUEUE = '1.2'
 GAV_QUEUE = '1'
 SGAV_QUEUE = '1'
@@ -64,13 +62,14 @@ async def check_and_notify(context: ContextTypes.DEFAULT_TYPE):
 
 # ==================== КОМАНДИ ====================
 async def start(update: Update, _):
-    await update.message.reply_text(
-        "svitloЄ — @svitlopidkamin_bot\n\n"
-        f"{LOCATION}, вул. {STREET}, {HOUSE}\n"
-        "ГПВ 1.2 | ГАВ 1 | СГАВ 1\n\n"
-        "Команда: /svitlo\n"
-        "Увімкнути сповіщення: /setchat"
+    text = (
+        "Слава Ісусу Христу! Я — *svitloЄ*\n\n"
+        "📍 Підкамінь (Підкамінська ОТГ)\n"
+        "🔌 ГПВ 1.2 | ГАВ 1 | СГАВ 1\n\n"
+        "💡 Перевірити світло — `/svitlo`\n"
+        "Увімкнути сповіщення — `/setchat`"
     )
+    await update.message.reply_text(text, parse_mode='Markdown')
 
 async def svitlo(update: Update, _):
     await update.message.reply_text(get_status_text())
@@ -90,7 +89,7 @@ def main():
     app.add_handler(CommandHandler("svitlo", svitlo))
     app.add_handler(CommandHandler("setchat", setchat))
     app.job_queue.run_repeating(check_and_notify, interval=3600, first=30)
-    logging.info("БОТ ЗАПУЩЕНО (v21.6)")
+    logging.info("БОТ ЗАПУЩЕНО")
     app.run_polling()
 
 if __name__ == '__main__':
