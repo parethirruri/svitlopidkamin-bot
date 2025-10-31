@@ -1,18 +1,20 @@
-# main.py — @svitlopidkamin_bot (повністю готовий)
+# main.py — @svitlopidkamin_bot (без /setchat, авто-сповіщення)
 import logging, re, pytz, requests
 from datetime import datetime, timedelta
 from bs4 import BeautifulSoup
 from telegram import Update
-from telegram.ext import Application, CommandHandler, ContextTypes
+from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters
 
 # ==================== НАЛАШТУВАННЯ ====================
-BOT_TOKEN = "8289591969:AAH0QDO7dJhq0lwfn9HcarxloO8_GY9RQcU"  # ТВІЙ ТОКЕН
+BOT_TOKEN = "8289591969:AAH0QDO7dJhq0lwfn9HcarxloO8_GY9RQcU"
 LOCATION = 'Підкамінь (Підкамінська ОТГ)'
 GPV_QUEUE = '1.2'
 GAV_QUEUE = '1'
 SGAV_QUEUE = '1'
 TZ = pytz.timezone('Europe/Kiev')
-CHAT_ID = None
+
+# Зберігаємо чати, де бот є адміном
+ACTIVE_CHATS = set()
 # =====================================================
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s')
@@ -44,52 +46,72 @@ def get_status_text():
         return "Протягом сьогоднішнього дня відключень світла не спостерігається."
     return "Заплановані відключення: " + "; ".join(res)
 
+# === Авто-сповіщення ===
 async def check_and_notify(context: ContextTypes.DEFAULT_TYPE):
-    if not CHAT_ID: return
     res = get_outage_schedule()
-    if not res or res == "ERROR": return
+    if not res or res == "ERROR" or not ACTIVE_CHATS:
+        return
+
     now = datetime.now(TZ)
     soon = now + timedelta(hours=1)
+
     for interval in res:
         if "з" not in interval: continue
         start_str = interval.split(" до ")[0].replace("з ", "")
         try:
             start = datetime.strptime(start_str, '%H:%M').replace(year=now.year, month=now.month, day=now.day)
             if now < start <= soon:
-                await context.bot.send_message(chat_id=CHAT_ID,
-                    text=f"Через 1 годину не буде світла!\n\n{interval}")
+                msg = f"Через 1 годину не буде світла!\n\n{interval}"
+                for chat_id in list(ACTIVE_CHATS):
+                    try:
+                        await context.bot.send_message(chat_id=chat_id, text=msg)
+                    except:
+                        ACTIVE_CHATS.discard(chat_id)  # Видаляємо, якщо бот більше не адмін
+        except: pass
+
+# === Перевірка адмін-прав ===
+async def check_admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat = update.effective_chat
+    if chat.type in ['group', 'supergroup']:
+        try:
+            member = await chat.get_member(context.bot.id)
+            if member.status in ['administrator', 'creator']:
+                ACTIVE_CHATS.add(chat.id)
+            else:
+                ACTIVE_CHATS.discard(chat.id)
         except: pass
 
 # ==================== КОМАНДИ ====================
-async def start(update: Update, _):
+async def start(update: Update, context):
+    await check_admin(update, context)
     text = (
-        "Слава Ісусу Христу! Я — *svitloЄ*\n\n"
+        "👋 Слава Ісусу Христу! Я — *svitloЄ*\n\n"
         "📍 Підкамінь (Підкамінська ОТГ)\n"
         "🔌 ГПВ 1.2 | ГАВ 1 | СГАВ 1\n\n"
         "💡 Перевірити світло — `/svitlo`\n"
-        "Увімкнути сповіщення — `/setchat`"
+        "🔔 Увімкнути сповіщення — `/setchat`"
     )
     await update.message.reply_text(text, parse_mode='Markdown')
 
-async def svitlo(update: Update, _):
+async def svitlo(update: Update, context):
+    await check_admin(update, context)
     await update.message.reply_text(get_status_text())
-
-async def setchat(update: Update, _):
-    global CHAT_ID
-    CHAT_ID = update.message.chat_id
-    await update.message.reply_text("Сповіщення увімкнено! За годину до відключення — повідомлю в чат.")
 # ===============================================
 
 def main():
-    if "YOUR_TOKEN_HERE" in BOT_TOKEN:
-        logging.error("ПОМИЛКА: Замініть BOT_TOKEN!")
-        return
     app = Application.builder().token(BOT_TOKEN).build()
+
+    # Команди
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("svitlo", svitlo))
-    app.add_handler(CommandHandler("setchat", setchat))
+
+    # Перевірка адмін-прав при будь-якому повідомленні
+    app.add_handler(MessageHandler(filters.ALL & ~filters.COMMAND, check_admin))
+
+    # Авто-сповіщення
     app.job_queue.run_repeating(check_and_notify, interval=3600, first=30)
-    logging.info("БОТ ЗАПУЩЕНО")
+
+    logging.info("БОТ ЗАПУЩЕНО (авто-сповіщення)")
     app.run_polling()
 
 if __name__ == '__main__':
