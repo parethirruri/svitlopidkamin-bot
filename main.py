@@ -9,8 +9,7 @@ from telegram import Update
 from telegram.ext import Application, CommandHandler, ContextTypes
 
 # === ТОКЕН ===
-BOT_TOKEN = "8289591969:AAH0QDO7dJhq0lwfn9HcarxloO8_GY9RQcU
-"
+BOT_TOKEN = "8289591969:AAH0QDO7dJhq0lwfn9HcarxloO8_GY9RQcU"
 
 # === Параметри ===
 LOCATION = 'Підкамінь (Підкамінська ОТГ)'
